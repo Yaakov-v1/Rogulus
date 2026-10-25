@@ -1,0 +1,4 @@
+node_modules/
+dist/
+*.tgz
+.lean-harness/state.sqlite*

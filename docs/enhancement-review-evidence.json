@@ -1,0 +1,60 @@
+{
+  "node": "v24.16.0",
+  "method": "Unmodified JavaScript code fences from the attachment, isolated local fixtures, no inference calls.",
+  "results": [
+    {
+      "case": "capture_can_forge_approval",
+      "reproduced": true,
+      "before": "captured",
+      "after": "active",
+      "approved_by": "pretend-human",
+      "guard_denied": false
+    },
+    {
+      "case": "no_sensor_run_still_confirms",
+      "reproduced": true,
+      "sensor_run_count": 0,
+      "evidence": [
+        {
+          "at": "2026-10-19T01:25:20.322Z",
+          "session_id": "session-1",
+          "source": "static_analysis",
+          "outcome": "confirm",
+          "ref": "session:session-1",
+          "attested_by": "harness"
+        }
+      ]
+    },
+    {
+      "case": "failed_sensor_treated_as_green",
+      "reproduced": true,
+      "hook_exit": 0,
+      "sensor_runs": [
+        {
+          "sensor_id": "types",
+          "ms": 23,
+          "n": 0,
+          "exit": 2
+        }
+      ]
+    },
+    {
+      "case": "path_rule_files_bypass_injection_budget",
+      "reproduced": true,
+      "matching_rule_files": 20,
+      "rule_file_characters": 13470,
+      "session_start_context_characters": 0,
+      "note": "Generated files measured; live Claude rule loading not exercised."
+    },
+    {
+      "case": "failed_review_cached_as_seen",
+      "reproduced": true,
+      "hook_invocations": 2,
+      "reviewer_invocations": 1,
+      "hook_exit_codes": [
+        0,
+        0
+      ]
+    }
+  ]
+}

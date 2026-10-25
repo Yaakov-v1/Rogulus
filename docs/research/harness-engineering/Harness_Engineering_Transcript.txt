@@ -1,0 +1,204 @@
+HARNESS ENGINEERING: FROM PROMPTS TO SYSTEMS
+Presentation transcript · John Albert Jacob · Brownbag · October 2026
+Approximate length: 18 to 20 minutes, plus questions
+Follows the slide order of the revised deck (19 slides)
+
+==================================================
+
+[SLIDE 1 · Harness Engineering]
+
+Hi everyone, thanks for coming. I'm John Albert Jacob, and today I want to talk about something called harness engineering.
+
+If you've used Claude Code, Codex or Cursor, you've already worked with a harness, even if nobody called it that. The model is the engine. The harness is everything we build around it, like the tools, the instructions, the checks and the feedback, so it can actually achieve a goal reliably.
+
+Over the next twenty minutes or so, I'll show you how that layer around the model turned into its own discipline, and what it means for how we work.
+
+--------------------------------------------------
+
+[SLIDE 2 · Agents now run for hours]
+
+Let me start with why this suddenly matters.
+
+Agents don't just answer a question and stop anymore. They run for hours. OpenAI says single Codex runs regularly work on one task for six hours or more, often while the team is asleep. Cursor had hundreds of agents write over a million lines of code in about a week while building a web browser. And Anthropic had sixteen Claude agents working in parallel on one C compiler.
+
+Here's the catch: nobody can watch every one of those steps. So if we can't supervise the agent line by line, the environment around it has to catch the mistakes for us. That environment is the harness.
+
+--------------------------------------------------
+
+[SLIDE 3 · What we'll cover]
+
+Here's where we're going today.
+
+First, why this matters: the same model can do a lot better or a lot worse depending on what you wrap around it. Then what a harness actually is, what's inside one, and which parts you control versus which parts your tool vendor controls. After that, a short history, from the prompt tricks of 2022 to the term "harness engineering" showing up this February.
+
+Then the evidence, how teams actually build a harness, and the big open question of whether better models will make all of this unnecessary. And we'll close with two questions you're probably already asking: do we need to learn this, and do we have to build our own setup?
+
+--------------------------------------------------
+
+[SLIDE 4 · Same model, better agent]
+
+So here's the number that got my attention.
+
+LangChain took their coding agent and kept the model exactly the same. They only changed the harness: the system prompt, the tools, and a few checks in the loop. On a benchmark called Terminal-Bench 2.0, their score went from 52.8 percent to 66.5 percent. That moved them from outside the top 30 to the top 5.
+
+A second comparison, from Composio, ran one model through eight different harnesses on the same 25 tasks. The worst harness got 68 percent. The best got 88.
+
+Same model both times. Only the harness changed.
+
+--------------------------------------------------
+
+[SLIDE 5 · Agent = Model + Harness]
+
+So what is a harness? The cleanest definition comes from Vivek Trivedy at LangChain: Agent equals Model plus Harness. And he sums it up in one line: "If you're not the model, you're the harness."
+
+That means the system prompt, the tools, skills and MCP servers, the sandbox the agent runs in, how it hands work to sub-agents, and the hooks that check its work. All of that is harness.
+
+The name "harness engineering" itself came from Mitchell Hashimoto, the creator of Terraform and Ghostty, in February this year. His rule is simple: whenever an agent makes a mistake, take the time to engineer a solution so it never makes that mistake again. Six days later, OpenAI used the same term in a big engineering report, and it went mainstream.
+
+--------------------------------------------------
+
+[SLIDE 6 · Four eras]
+
+None of this came out of nowhere, though. I'd break it into four eras.
+
+2022 and 2023 were about prompts and loops. A paper called ReAct gave us the basic loop agents still use: reason, act, observe. AutoGPT went viral, and OpenAI added function calling so models could call tools properly. People called this prompt engineering.
+
+2024 was about agent interfaces. Princeton's SWE-agent showed that designing a better interface for the agent, not just a better prompt, made a big difference. Devin launched, and Anthropic released MCP as a standard way to plug in tools.
+
+2025 was the year of coding agents: Claude Code, Codex, and the AGENTS.md file. The buzzword became context engineering.
+
+And 2026 is when it got its own name: harness engineering, with ideas like guides, sensors and harnesses that improve themselves.
+
+--------------------------------------------------
+
+[SLIDE 7 · Prompt, context, harness]
+
+A quick way to see how these three terms relate is as nested boxes.
+
+Prompt engineering is the smallest box: the wording of one request. Context engineering is bigger: everything the model sees on each turn, like the instructions, the files and the conversation history. That term took off in June 2025. And harness engineering is the outer box: the whole system around the model, including the loop, the tools, the environment and the checks.
+
+I'll be honest that not everyone draws it this way. Birgitta Böckeler at Thoughtworks sees harness engineering as a kind of context engineering, so the boundary is still debated. But nested boxes are a useful mental model.
+
+--------------------------------------------------
+
+[SLIDE 8 · Inside a harness]
+
+Here's what a harness looks like inside. Read it left to right, as one cycle.
+
+Guides steer the model before it acts. These are things like the prompt, your AGENTS.md file and skills. Then the model acts, using tools inside an environment, which includes the tools, a sandbox, permissions and memory files. Then sensors check the result: tests, linters and reviewers. If something fails, that feedback goes straight back to the model so it can fix it and retry. That loop is the agent loop.
+
+And here's the key takeaway on this slide: when a mistake repeats, add a guide or a sensor. That's the whole practice in one sentence.
+
+--------------------------------------------------
+
+[SLIDE 9 · Harness in action]
+
+This figure is from a June 2026 paper by Sanderson de Macedo called "What makes a harness a harness."
+
+He goes back to where the word comes from: a horse's harness, or tack. The horse is powerful, but without the harness that power goes in every direction. The harness doesn't make the horse stronger. It channels its strength toward where you want to go.
+
+That's exactly the relationship between a model and its harness. The model brings the capability. The harness points it at the goal.
+
+--------------------------------------------------
+
+[SLIDE 10 · Five instances when utilizing a harness]
+
+So how do the teams doing this well actually build their harnesses? Five habits keep coming up.
+
+One, a map, not a manual. OpenAI tried one giant instructions file and it didn't work. They replaced it with a short AGENTS.md, about a hundred lines, that points the agent to deeper docs.
+
+Two, enforce with code, not prose. A study of 481 public CLAUDE.md files found that only about 4 percent of the security rules people wrote down were backed by an actual control. Writing a rule isn't enough. A linter or a hook actually stops the mistake.
+
+Three, fast checks on every change. LangChain makes their agent run a verification checklist before it's allowed to say it's done.
+
+Four, keep state in files and git. Anthropic's long-running agents keep a feature list, a progress log and git commits, so a fresh session can pick up exactly where the last one stopped.
+
+And five, build to delete. Every piece of a harness exists because the model couldn't do something on its own. When a better model comes out, some of those pieces stop being needed, so you test and remove them.
+
+--------------------------------------------------
+
+[SLIDE 11 · Will better models eat the harness?]
+
+Which brings us to the big debate: if models keep getting better, won't all of this just become unnecessary?
+
+On one side, Noam Brown at OpenAI has argued that today's scaffolding will get replaced as models improve, just like reasoning models replaced a lot of the tricks people built for earlier models.
+
+On the other side, Anthropic found the opposite in practice. When they moved to newer Claude models, they could delete some parts of their harness, but the overall setup still helped. Useful harnesses changed shape rather than shrinking.
+
+So far, the evidence says each new model generation reshapes the harness rather than removing it.
+
+--------------------------------------------------
+
+[SLIDE 12 · Lots of instructions, little enforcement]
+
+So where are teams today? Marmelab audited hundreds of harness repositories in September, and the picture is pretty clear.
+
+63 percent of large open-source projects now ship an agent instruction file. So almost everyone writes instructions. But only about 3 percent declare a sub-agent, only about 3 percent of repos commit a single rule that blocks a dangerous action, and only 40 percent of harnesses have any tests at all.
+
+In other words: lots of instructions, very little enforcement. That's the gap most of us can close.
+
+--------------------------------------------------
+
+[SLIDE 13 · Must we build it on our own?]
+
+Now the two questions I expect from this room. First: do we have to build our own setup to keep up with all this?
+
+Not from scratch. Think of it as three options.
+
+Option one: use your tool as it is. Birgitta Böckeler describes it as two layers. The vendor ships the inner harness inside Claude Code, Codex or Cursor, and we users build the outer layer around our own codebase.
+
+Option two is where I'd start, and it's small: add a thin layer. A short AGENTS.md, your existing tests and linters wired in as checks, and a few skills for the things you do over and over. Keep it lean. Vercel removed most of their agent's tools and it got better. As Andrew Qu from Vercel put it, "The best agents might be the ones with the fewest tools."
+
+Option three, building your own full harness, is what OpenAI and Anthropic did for an agent-built product of about a million lines, and for unattended six-hour runs. Most of us won't need that.
+
+And you don't have to plan it all up front. Prithvi Rajasekaran at Anthropic points out that every piece of a harness "encodes an assumption about what the model can't do on its own." So add a piece when the agent keeps failing, and delete it when a newer model no longer needs it.
+
+--------------------------------------------------
+
+[SLIDE 14 · Do you need to learn Harness Engineering?]
+
+Second question: do we actually need to learn this?
+
+I'd say yes, but only enough to steer it. You don't need to build Claude Code yourself. The OpenAI team behind that million-line project summed up their job in four words: "Humans steer. Agents execute."
+
+Three reasons it's worth knowing. One, it changes results about as much as the model does. We saw it earlier: same model, harness changed, 52.8 to 66.5 percent. Two, you already have one. In Vivek Trivedy's words, "If you're not the model, you're the harness." Every line you add to an AGENTS.md file is you shaping it. And three, it tells you what to fix. When the agent keeps making the same mistake, Mitchell Hashimoto's rule applies: "engineer a solution such that the agent never makes that mistake again."
+
+--------------------------------------------------
+
+[SLIDE 15 · For more in-depth illustrations and discussions]
+
+If you want to go deeper, these are the four places I'd start.
+
+Birgitta Böckeler's article on martinfowler.com has a great overview diagram of guides and sensors. Sanderson de Macedo's paper has the horse-and-tack figure you saw earlier, and a full map of everything inside a harness. And Cursor's post shows the actual web browser their agents built from scratch.
+
+I'll share the links after the session.
+
+--------------------------------------------------
+
+[SLIDE 16 · Start your harness this week]
+
+So, what can you do this week? Four small things.
+
+First, log every mistake you have to fix by hand. Just keep a list.
+
+Second, when something shows up on that list twice, turn it into a guide or a sensor. That could be a line in AGENTS.md, a skill, a test or a linter rule.
+
+Third, keep your AGENTS.md short. Treat it as a map that points to deeper docs, not a manual.
+
+And fourth, every time you upgrade to a new model, re-test your harness and remove what it no longer needs.
+
+If you remember one thing from today, it's this: Agent equals Model plus Harness. You pick the model. You build the harness.
+
+--------------------------------------------------
+
+[SLIDES 17 AND 18 · References]
+
+Everything I've shown today is backed by these sources, listed in APA format. They include the original posts from OpenAI, Anthropic, LangChain, Cursor and Vercel, Birgitta Böckeler's article, Mitchell Hashimoto's post, Marmelab's audit, and the research papers behind the timeline. All the links are clickable in the deck, so feel free to grab it afterward.
+
+--------------------------------------------------
+
+[SLIDE 19 · End of Presentation]
+
+That's it from me. Thank you for listening. I'm happy to take any questions.
+
+==================================================

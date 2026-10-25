@@ -1,0 +1,19 @@
+{
+  "name": "lean-sdlc-harness",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local, evidence-backed learning wrapper for Claude Code",
+  "type": "module",
+  "engines": { "node": ">=24.0.0 <25" },
+  "bin": { "lean-harness": "bin/lean-harness.mjs" },
+  "files": ["bin", "dist", "src", "test", "tsconfig.json", "README.md", "docs"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "benchmark": "npm run build && node test/benchmark.mjs",
+    "pilot": "npm run build && node test/pilot.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": { "@types/node": "24.13.3", "typescript": "5.9.3" }
+}

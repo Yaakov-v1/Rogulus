@@ -1,0 +1,49 @@
+{
+  "kind": "real-model paired pilot",
+  "model": "sonnet",
+  "status": "blocked_authentication",
+  "tasks": [
+    {
+      "id": "trim-greeting",
+      "category": "small edit"
+    },
+    {
+      "id": "preserve-zero",
+      "category": "recurring defect"
+    },
+    {
+      "id": "empty-average",
+      "category": "edge case"
+    },
+    {
+      "id": "clamp",
+      "category": "small edit"
+    },
+    {
+      "id": "immutable-sort",
+      "category": "recurring defect"
+    },
+    {
+      "id": "query-zero",
+      "category": "recurring defect"
+    },
+    {
+      "id": "cart-total",
+      "category": "multi-file change"
+    },
+    {
+      "id": "name-format",
+      "category": "multi-file change"
+    },
+    {
+      "id": "escape-html",
+      "category": "web correctness"
+    },
+    {
+      "id": "bounded-retry",
+      "category": "async failure"
+    }
+  ],
+  "results": [],
+  "caveat": "Seeded toy tasks, not production utility proof. Corrections, regressions beyond assertions, and human review time require manual annotation. Experimental lessons are explicitly seeded; this is not evidence of automatic learning."
+}
