@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "checks": [
+    { "name": "types", "command": "npm run typecheck" },
+    { "name": "tests", "command": "npm test" }
+  ],
+  "lessonCap": 12,
+  "reviewDays": 90
+}

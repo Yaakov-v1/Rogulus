@@ -5,10 +5,8 @@ It **auto-scales** two ways: ritual grows with task size, and guidance grows fro
 Native settings, permissions and memory stay as they are; this file adds process only.
 
 ## Project checks
-The checks are the only source of _green_. Fill in the real commands once:
-- Types: `<command>`
-- Tests: `<command>`
-- Lint/build: `<command>` (optional)
+The checks are the only source of _green_. Their commands live in `.claude/harnestica.json` (`checks`); run them from there.
+Hooks in `.claude/hooks/` enforce this: the Stop hook sends you back once when code changed and not every check has passed since.
 
 ## 1. Size the task
 Classify every request before acting. When unsure between two sizes, pick the larger one.
@@ -18,7 +16,7 @@ Classify every request before acting. When unsure between two sizes, pick the la
 | Tiny | one file, obvious change, no behaviour change | edit → run the narrowest relevant check |
 | Small | one area, clear intent, ≤3 files | read the touched code → edit → run checks |
 | Medium | several files, a new behaviour, or unclear intent | state the plan in ≤5 bullets → get a yes → build → checks → self-review the diff |
-| Large | cross-cutting, schema/API/security, or ≥1 day | written plan with risks → approval → slice into tracer bullets → checks per slice → independent review |
+| Large | cross-cutting, schema/API/security, or ≥1 day | written plan with risks → approval → slice into tracer bullets → checks per slice → `reviewer` subagent |
 
 Escalate a size the moment the work reveals more (a failing unrelated test, a hidden caller, a migration).
 When you de-escalate, say why in one line.
@@ -26,7 +24,7 @@ When you de-escalate, say why in one line.
 ## 2. Core loop
 1. **Understand**: restate the goal in one line. Locate code with targeted search; read the symbols you will change and their callers.
 2. **Plan** (medium and up): files, approach, the check that will prove it. Ask only questions whose answer changes the work.
-3. **Build**: the smallest change that meets the goal, in the style of the surrounding code. Keep the build _green_ between slices.
+3. **Build**: the smallest change that meets the goal. Before writing or reviewing code, read `.claude/rules/CLEAN-CODE.md`; every changed line meets its MUST rules. Keep the build _green_ between slices.
 4. **Verify**: run the project checks. A bug fix starts _red_: reproduce it with a failing test first, then make it pass.
 5. **Report**: what changed, the check output that proves it, and what is not done or not verified.
 
@@ -45,7 +43,7 @@ A step is done when its completion line holds:
 
 ## 4. Context budget
 - Read the parts that bear on the task: search first, then open the relevant ranges.
-- Delegate wide sweeps (many files, docs, logs) to a subagent that returns a compact summary; keep the main context for decisions and edits.
+- Delegate wide sweeps (many files, docs, logs) to the `explorer` subagent; keep the main context for decisions and edits.
 - Prefer the environment (`package.json`, configs, `--help`) over memory for facts it already states.
 - Summarise long command output to the lines that matter.
 
@@ -57,16 +55,11 @@ Propose a lesson when any of these happen:
 - the same check fails the same way twice across sessions;
 - a wrong assumption costs a rework.
 
-Proposing:
-1. Write the candidate at the end of your report as: `LESSON? <rule> — evidence: <what happened, date> — scope: <path or repo>`.
-2. Add it to the Lessons slot only after the owner says yes. A candidate stays a candidate until then.
-3. One lesson per distinct mistake; merge with an existing lesson when they overlap.
+The hooks flag a check that failed the same way in an earlier session; treat that flag as a trigger.
 
-Keeping the slot tight:
-- Hard cap: 12 lessons. When full, propose which lesson to merge or retire before adding a new one.
-- Re-review any lesson older than 90 days: keep, rewrite, or retire, with the owner's yes.
-- Retire a lesson the codebase now enforces itself (a lint rule, a type, a test).
-- Lessons are scoped: apply a lesson only when the task touches its scope.
+End your report with `LESSON? <rule> — evidence: <what happened, date> — scope: <path or repo>`, then run the `/lesson` skill to approve, merge or retire.
+A candidate stays a candidate until the owner says yes. Hard cap: 12 lessons; 90-day re-review; the session-start hook reports overdue or over-cap lessons.
+Apply a lesson only when the task touches its scope.
 
 ## 6. Lessons
 Format: `- [YYYY-MM-DD · scope] rule — evidence`
