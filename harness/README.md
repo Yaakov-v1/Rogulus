@@ -84,7 +84,7 @@ Source transcripts stay where Claude wrote them. Extraction reads at most the fi
 
 Candidates are capped at three per session, schema-validated, and must cite existing evidence. They remain unapproved. Factual outcome (`unknown`, `supported`, `refuted`) is independent of lifecycle (`candidate`, `active`, `retired`). Evidence references establish provenance, not the truth of an LLM's interpretation. Human review must check whether the claimed lesson follows from the excerpt; passing unrelated tests does not establish that.
 
-Review prints cited excerpts and all overlapping active/candidate guidance together. It does not claim semantic contradiction detection. To replace an existing lesson atomically:
+`review` prints `{total, truncated, items}` with at most 20 due lessons (candidates and overdue active lessons) and, per lesson and bounded: the stated claim, cited excerpts (shown with the lesson's recorded outcome; excerpts are not individually judged as support or refutation), related check outcomes (from `link-check` / `capture` `checkRefs`), up to 3 matching recurrence groups, up to 5 overlapping lessons with totals, and recent history. `lean-harness recurrence` prints repeated parsed failures grouped by check fingerprint, category, path and message; a group needs at least two distinct sessions (same-session retries and duplicate rows do not count), and aggregation is offline with no model call or root-cause inference. Neither claims semantic contradiction detection. `lean-harness link-check ID check:<verificationId>:<index>` (or `checkRefs` in a `capture` file, max 8) links a lesson to a real check run from its own session for explanation only; it never approves or proves anything, and generated commands never become checks. To replace an existing lesson atomically:
 
 ```sh
 lean-harness approve <new-candidate-id> --supersedes <old-active-id>
@@ -160,6 +160,6 @@ Each call has a $2 configured API budget cap; actual billing depends on your Cla
 - **Sensors:** configured argument-array commands → bounded outputs, check statuses, durations, before/after snapshot identities.
 - **Learning:** ended session evidence → validated candidates; explicit review transaction → activation/retirement history.
 
-Storage schema version 1 lives in `src/store.ts`; extraction JSON Schema lives in `src/learning.ts`. These are ordinary modules, with no third-party plugin API or event bus. Cross-repository learning, autonomous promotion, self-modifying code, LLM reviews, check caching, and additional agent adapters are intentionally deferred.
+Storage schema version 1 lives in `src/store.ts`; the additive `lesson_checks` link table is created on the first `link-check`/`capture` with `checkRefs`, never when opening an older database; extraction JSON Schema lives in `src/learning.ts`. These are ordinary modules, with no third-party plugin API or event bus. Cross-repository learning, autonomous promotion, self-modifying code, LLM reviews, check caching, and additional agent adapters are intentionally out of scope: Claude Code is the only supported coding agent.
 
 Reference contracts: [Claude hooks](https://code.claude.com/docs/en/hooks), [Claude programmatic CLI](https://code.claude.com/docs/en/headless), [Node 24 SQLite](https://nodejs.org/download/release/latest-v24.x/docs/api/sqlite.html).

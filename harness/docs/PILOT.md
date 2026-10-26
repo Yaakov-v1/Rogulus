@@ -17,6 +17,15 @@ Fill in `humanCorrections`, `regressions`, and `batchReviewMs` in each result. R
 
 Then run the harness on real development sessions, process candidates in batches, and measure whether activated lessons prevent the same observed mistake in later comparable work. Native Claude memory remains enabled in both conditions. Compare against that actual baseline, not an artificially memoryless agent.
 
+## Human review effort and observed recurrence
+
+Each result carries two annotation objects, all `null` until a human fills them in. Never infer them from model output.
+
+- `humanReview`: `itemsReviewed`, `approved`, `rejected`, `retired`, `notes`, plus `batchReviewMs` (wall time from first `lean-harness review` to last decision, timed by the reviewer). Record the `review` output size if useful; it is bounded (3 recurrence groups, 5 checks, 5 conflicts per lesson).
+- `observedRecurrence`: `priorMistakeRef` (session/evidence ID of the original mistake), `comparableTaskRef`, `recurred` (did the same mistake appear again in comparable work, judged by a human), `preventedByLesson` (only `true` if the lesson was injected and a human attributes the avoidance to it), `notes`. `lean-harness recurrence` lists repeated failures across distinct sessions as a prompt for what to examine; its counts are descriptive and are not prevention evidence.
+
+Timing reuses existing records: hook overhead from `lean-harness metrics`, check runtime from `elapsedMs`/`checkMs`. Automated mechanism test (`test/recurrence.test.mjs`, "MECHANISM FIXTURE") shows failure -> candidate -> approval -> next-session guidance with a fixture agent; it verifies plumbing only and is not utility evidence.
+
 ## Decision
 
 Expand only when the harness meets the latency/context limits, a lesson prevents a demonstrated recurring mistake, and task acceptance/regressions do not worsen. Ten toy task pairs are directional evidence, not statistical proof. Do not substitute an LLM's self-reported success for assertions or human acceptance.

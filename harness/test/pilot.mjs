@@ -14,7 +14,7 @@ const model = modelAt >= 0 ? process.argv[modelAt + 1] : 'sonnet';
 const outAt = process.argv.indexOf('--out');
 const out = outAt >= 0 ? process.argv[outAt + 1] : null;
 const report = { kind: 'real-model paired pilot', model, status: 'not_run', tasks: cases.map(c => ({ id: c.id, category: c.category })), results: [],
-  caveat: 'Seeded toy tasks, not production utility proof. Corrections, regressions beyond assertions, and human review time require manual annotation. Experimental lessons are explicitly seeded; this is not evidence of automatic learning.' };
+  caveat: 'Seeded toy tasks, not production utility proof. Corrections, regressions beyond assertions, human review effort and observed recurrence require manual annotation (null = not observed). Experimental lessons are explicitly seeded; this is not evidence of automatic learning.' };
 function save() { if (out) writeFileSync(out, JSON.stringify(report, null, 2) + '\n'); }
 if (!run) {
   console.log('Ten paired tasks prepared. To make up to 20 paid Claude calls, pass --run --model <fixed-model> --out <report.json>.');
@@ -57,7 +57,9 @@ if (!run) {
         const sessions = store.sessions().filter(s => s.status !== 'manual');
         report.results.push({ task: task.id, treatment, code, elapsedMs, verified: verification.status === 'verified',
           checkMs: verification.results.reduce((n,r)=>n+r.durationMs,0), injectedChars: sessions[0]?.context.length ?? 0,
-          humanCorrections: null, regressions: null, batchReviewMs: null });
+          humanCorrections: null, regressions: null, batchReviewMs: null,
+          humanReview: { itemsReviewed: null, approved: null, rejected: null, retired: null, notes: null },
+          observedRecurrence: { priorMistakeRef: null, comparableTaskRef: null, recurred: null, preventedByLesson: null, notes: null } });
         store.close(); report.status = 'running'; save();
       }
     }

@@ -1,0 +1,16 @@
+{
+  "kind": "synthetic adapter benchmark; not real-model utility evidence",
+  "node": "v24.16.0",
+  "platform": "darwin",
+  "samples": 20,
+  "storedLessons": 10001,
+  "selectionP95Ms": 39.20929199999989,
+  "bareSessionP95Ms": 128.3385419999995,
+  "wrappedSessionP95Ms": 653.4299169999995,
+  "addedSessionP50Ms": 513.5118330000005,
+  "addedSessionP95Ms": 534.6252089999998,
+  "worstAddedSessionMs": 535.1971680000006,
+  "targetMs": 2000,
+  "passed": true,
+  "note": "External wall clock includes both Node startups, four hooks, telemetry writes, selection over 10k active lessons, and agent fixture startup. No LLM calls."
+}

@@ -4,7 +4,7 @@ import { existsSync, chmodSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkObservation } from './findings.js';
 import { stateDir } from './config.js';
-import type { Candidate, Evidence, Lesson, Session } from './types.js';
+import type { Candidate, Config, Evidence, Lesson, Session } from './types.js';
 
 export class Store {
   db: DatabaseSync;
@@ -94,6 +94,30 @@ export class Store {
     return rows.map(r => ({ id: String(r.id), statement: String(r.statement), scope: JSON.parse(String(r.scope)),
       sessionId: String(r.session_id), evidence: JSON.parse(String(r.evidence)), outcome: r.outcome as Lesson['outcome'],
       status: r.status as Lesson['status'], createdAt: String(r.created_at), reviewedAt: r.reviewed_at as string | null }));
+  }
+  // Additive: the link table is created lazily on first link (write path); opening an older database never runs DDL.
+  private ensureLinks() {
+    this.db.exec(`CREATE TABLE IF NOT EXISTS lesson_checks (
+      lesson_id TEXT NOT NULL REFERENCES lessons(id), evidence_ref TEXT NOT NULL, check_name TEXT NOT NULL,
+      linked_at TEXT NOT NULL, PRIMARY KEY(lesson_id, evidence_ref))`);
+  }
+  // Explanatory link only: never alters lesson status, outcome or evidence, and never grants approval.
+  linkCheck(lessonId: string, reference: string, config: Config) {
+    const lesson = this.lessons().find(l => l.id === lessonId);
+    if (!lesson) throw new Error(`Unknown lesson: ${lessonId}`);
+    const observation = checkObservation(this, reference, lesson.sessionId);
+    if (!config.checks.some(c => c.name === observation.check)) throw new Error(`Check "${observation.check}" is not a configured check.`);
+    this.ensureLinks();
+    this.db.prepare('INSERT OR IGNORE INTO lesson_checks VALUES(?,?,?,?)').run(lessonId, reference, observation.check, new Date().toISOString());
+    return observation;
+  }
+  lessonChecks(lessonId: string, config?: Config, lesson?: Lesson) {
+    if (!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='lesson_checks'").get()) return [];
+    const sessionId = (lesson ?? this.lessons().find(l => l.id === lessonId))?.sessionId;
+    if (!sessionId) return [];
+    return this.db.prepare('SELECT evidence_ref FROM lesson_checks WHERE lesson_id=? ORDER BY evidence_ref').all(lessonId).flatMap(r => {
+      try { return [checkObservation(this, String(r.evidence_ref), sessionId, config)]; } catch { return []; }
+    });
   }
   review(ids: string[], action: 'approve' | 'reject' | 'retire' | 'reaffirm', supersedes?: string, now = new Date()) {
     if (!ids.length) throw new Error('Select explicit lesson IDs; there is no approve-all operation.');

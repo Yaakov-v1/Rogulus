@@ -61,13 +61,15 @@ export function checkObservation(store: Store, reference: string, sessionId: str
     result, note: 'Observed check outcome; relevance is not proof of this lesson or its usefulness.' };
 }
 
+export type RecurrenceGroup = ReturnType<typeof recurrenceSummaries>['groups'][number];
+// Offline and deterministic: reads stored check records only; never calls a model or runs a command.
 export function recurrenceSummaries(store: Store) {
   const rows = store.db.prepare(`SELECT v.id, v.session_id, v.status, v.ended_at, v.before_hash, v.after_hash,
     j.key AS result_index, j.value AS result_json
     FROM verifications v, json_each(CASE WHEN json_valid(v.results) THEN v.results ELSE '[]' END) j
     ORDER BY v.started_at DESC, v.id DESC, CAST(j.key AS INTEGER) DESC LIMIT 1001`).all();
   type Group = { id: string; check: string; category: string; path: string; message: string;
-    runs: Set<string>; sessions: Set<string>; examples: { sessionId: string; evidenceRef: string; verificationId: string }[] };
+    runs: Set<string>; sessions: Set<string>; snapshots: Set<string>; examples: { sessionId: string; evidenceRef: string; verificationId: string }[] };
   const grouped = new Map<string, Group>();
   let partialFindings = false;
   for (const row of rows.slice(0, 1000)) {
@@ -85,17 +87,19 @@ export function recurrenceSummaries(store: Store) {
       const message = finding.message.replace(/\s+/g, ' ').trim();
       const id = createHash('sha256').update(JSON.stringify([result.checkFingerprint, finding.category, finding.path, message])).digest('hex').slice(0, 24);
       const group = grouped.get(id) ?? { id, check: result.name, category: finding.category, path: finding.path,
-        message, runs: new Set<string>(), sessions: new Set<string>(), examples: [] };
-      if (!group.runs.has(evidenceRef) && group.examples.length < 3)
+        message, runs: new Set<string>(), sessions: new Set<string>(), snapshots: new Set<string>(), examples: [] };
+      // A retry of the same snapshot in the same session is one observation, not a recurrence.
+      const snapshotKey = `${row.session_id}|${row.before_hash}`;
+      if (!group.sessions.has(String(row.session_id)) && group.examples.length < 3)
         group.examples.push({ sessionId: String(row.session_id), evidenceRef, verificationId: String(row.id) });
-      group.runs.add(evidenceRef); group.sessions.add(String(row.session_id)); grouped.set(id, group);
+      group.runs.add(evidenceRef); group.snapshots.add(snapshotKey); group.sessions.add(String(row.session_id)); grouped.set(id, group);
     }
   }
-  const recurring = [...grouped.values()].filter(g => g.runs.size > 1)
+  const recurring = [...grouped.values()].filter(g => g.sessions.size > 1)
     .sort((a, b) => b.sessions.size - a.sessions.size || b.runs.size - a.runs.size || a.id.localeCompare(b.id));
   return { examinedChecks: Math.min(rows.length, 1000), historyTruncated: rows.length > 1000,
     groupsTruncated: recurring.length > 10, partialFindings,
-    groups: recurring.slice(0, 10).map(({ runs, sessions, ...group }) => ({ ...group, runCount: runs.size, sessionCount: sessions.size,
-      examplesTruncated: runs.size > group.examples.length })),
-    note: 'Descriptive failure recurrence within bounded history. Counts do not infer a root cause, factual support, independent experiments, or prevented mistakes.' };
+    groups: recurring.slice(0, 10).map(({ runs, sessions, snapshots, ...group }) => ({ ...group, runCount: runs.size, distinctSnapshotCount: snapshots.size, sessionCount: sessions.size,
+      examplesTruncated: sessions.size > group.examples.length })),
+    note: 'Descriptive failure recurrence within bounded history. A recurrence needs at least two distinct sessions; same-session retries and duplicate rows are not independent. Counts do not infer a root cause, factual support, independent experiments, or prevented mistakes.' };
 }

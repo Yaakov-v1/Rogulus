@@ -4,20 +4,20 @@ Home of our self-improving ("auto-scaling") SDLC harness: a local CLI that wraps
 
 **"Auto scaling" here means** that guidance improves as session evidence accumulates, while context and processing stay bounded. It does **not** mean infrastructure autoscaling, spawning agents during coding, lessons approved without a human, or self-modifying code.
 
-Current state: see [STATUS.md](STATUS.md). Next step: run [docs/build-prompt.md](docs/build-prompt.md) as the brief for the next build session.
+Current state: see [STATUS.md](STATUS.md). Next step: run the real-model pilot ([harness/docs/PILOT.md](harness/docs/PILOT.md)) to test utility; the [build brief](docs/build-prompt.md) items 1-5 are implemented.
 
 ## Map
 
 | Path | What it is |
 |---|---|
 | [harness/](harness/) | The `lean-sdlc-harness` package (TypeScript, Node 24, local SQLite, CLI only). Its own [README](harness/README.md) has the full usage docs. |
-| [docs/build-prompt.md](docs/build-prompt.md) | Brief for finishing the bounded enhancement: goal, constraints, acceptance table. Paths point into this folder. |
+| [docs/build-prompt.md](docs/build-prompt.md) | Brief for the bounded enhancement (implemented in 0.2.0): goal, constraints, acceptance table. Paths point into this folder. |
 | [docs/enhancement-review.md](docs/enhancement-review.md) · [evidence](docs/enhancement-review-evidence.json) | Oct 19 review of the proposed design. Reproduces five defects in the *proposal's* sample scripts, not in the package. |
 | [docs/design/self-evolving-sdlc-harness.md](docs/design/self-evolving-sdlc-harness.md) | Original design report: assumption ledger schema, lifecycle, Guides/Factory/Sensors contracts, phased build plan. Reference only; the package supersedes its sample scripts. |
 | [docs/research/self-improving-harnesses.md](docs/research/self-improving-harnesses.md) | Research on self-improving and self-modifying agent harnesses (prior art, evaluation, guardrails), as of Oct 2026. |
 | [docs/research/harness-engineering/](docs/research/harness-engineering/) | Background material: the "Harness Engineering" deck and transcript, plus two workflow synthesis notes. |
 | [work/](work/) | Regression fixtures: `enhancement-review-2026-10-19` (defect reproductions) and `enhancement-baseline-2026-10-19` (the package snapshot before the Oct 19 edits, plus its benchmark). |
-| [releases/](releases/) | `lean-sdlc-harness-0.1.0.tgz`, the MVP archive from Oct 13. |
+| [releases/](releases/) | `lean-sdlc-harness-0.1.0.tgz` (MVP, Oct 13) and `lean-sdlc-harness-0.2.0.tgz` (enhancement, Oct 26). |
 
 ## Quick start
 

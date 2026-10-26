@@ -53,3 +53,18 @@ Tests cover approval/scope/expiry/rollback, 10k-entry context caps, idempotent i
 5. Accept the MVP only after reviewing the result. Expand the harness only if real sessions demonstrate prevented repeat mistakes without unacceptable overhead.
 
 No commit, publication, deployment, automation, or cross-repository promotion was performed.
+
+## Enhancement 0.2.0 (2026-10-26)
+
+Structured `tsc` findings, check-linked lessons, offline recurrence summaries, a bounded `review` view and measurement were added. Claude Code is the only coding agent; the Codex/manual adapter work was removed.
+
+| Check | Result |
+|---|---|
+| `npm run typecheck` | pass |
+| `npm test` | **29 passed, 0 failed** |
+| `node --test test/adapter.test.mjs` x 5 | 12/12 pass each run, 0 flakes |
+| `npm run benchmark` ([benchmark-0.2.0.json](benchmark-0.2.0.json)) | passed: 20 pairs, 10,001 lessons; selection p95 39.2 ms; added session p50 513.5 ms, p95 534.6 ms, worst 535.2 ms vs 2,000 ms target |
+| `npm run pilot -- --run` | **not run** (owner decision); utility stays pending |
+
+Post-review fixes: opening a database no longer runs DDL (the `lesson_checks` table is created lazily on first link, and reads treat a missing table as empty), `review` reports `recordedOutcome` plus `citedEvidence` instead of supporting/refuting buckets, is capped at 20 items with `total`/`truncated`, and looks each lesson up once. The fixture tests verify mechanics only (distinct-session recurrence, retry/duplicate non-independence, zero agent calls in aggregation/review, a labelled failure -> candidate -> approval -> next-session fixture). They are not utility evidence. The benchmark is synthetic and excludes model time.
+

@@ -4,8 +4,7 @@ export interface Lesson {
   id: string; statement: string; scope: string[]; sessionId: string; evidence: string[];
   outcome: Outcome; status: LessonStatus; createdAt: string; reviewedAt: string | null;
 }
-export type AgentKind = 'claude' | 'codex' | 'manual';
-export interface AgentConfig { kind?: AgentKind; command: string; args: string[]; }
+export interface AgentConfig { command: string; args: string[]; }
 export interface Check { name: string; command: string; args: string[]; timeoutMs: number; parser?: 'tsc'; }
 export interface Finding {
   category: string; path: string; line: number; column: number; message: string; evidenceRef: string;
@@ -21,7 +20,7 @@ export interface Config {
   version: 1;
   agent: AgentConfig;
   checks: Check[];
-  learning: { agent?: AgentConfig; model: string; timeoutMs: number; maxBudgetUsd: number | null; maxInputChars: number };
+  learning: { model: string; timeoutMs: number; maxBudgetUsd: number; maxInputChars: number };
 }
 export interface Session {
   id: string; startedAt: string; endedAt: string | null; transcript: string | null;

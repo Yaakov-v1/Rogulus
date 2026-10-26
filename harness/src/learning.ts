@@ -1,6 +1,8 @@
 import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { taskPath } from './config.js';
+import { scopesOverlap, taskPath } from './config.js';
+import { recurrenceSummaries } from './findings.js';
+import { REVIEW_AGE_MS } from './types.js';
 import type { Candidate, Config, Evidence, Session } from './types.js';
 import type { Store } from './store.js';
 import { runProcess } from './process.js';
@@ -119,4 +121,35 @@ EVIDENCE:\n${JSON.stringify(evidence)}`;
     }
   }
   return results;
+}
+
+const REVIEW_MAX_ITEMS = 20;
+const clip = (text: string, n: number) => text.length > n ? text.slice(0, n - 1) + '…' : text;
+// Offline review view: reads stored records only (no model call, no command execution). Every list is capped.
+export function reviewItems(store: Store, config: Config, now = Date.now()) {
+  const lessons = store.lessons(), recurrence = recurrenceSummaries(store);
+  const due = lessons.filter(l => l.status === 'candidate' || (l.status === 'active' && (!l.reviewedAt || now - Date.parse(l.reviewedAt) >= REVIEW_AGE_MS)));
+  const items = due.slice(0, REVIEW_MAX_ITEMS).map(l => {
+    const cited = store.evidence(l.sessionId).filter(e => l.evidence.includes(e.id));
+    const excerpts = cited.slice(0, 5).map(e => ({ id: e.id, kind: e.kind, source: clip(e.source, 200), excerpt: clip(e.text, 400) }));
+    const checks = store.lessonChecks(l.id, config, l);
+    const linked = new Set(checks.map(c => c.check));
+    const related = recurrence.groups.filter(g => linked.has(g.check) || (l.scope.length > 0 && scopesOverlap(l.scope, [g.path])));
+    const conflicts = lessons.filter(o => o.id !== l.id && o.status !== 'retired' && scopesOverlap(l.scope, o.scope));
+    const history = store.db.prepare('SELECT action, at, detail FROM history WHERE lesson_id=? ORDER BY id DESC LIMIT 5').all(l.id)
+      .map(h => ({ action: String(h.action), at: String(h.at), detail: String(h.detail) }));
+    return { id: l.id, status: l.status, outcome: l.outcome, createdAt: l.createdAt, reviewedAt: l.reviewedAt, sessionId: l.sessionId, scope: l.scope,
+      statedClaim: clip(l.statement, 1200),
+      // Excerpts are merely cited; the recorded lesson outcome is reported separately and is not a per-excerpt judgement.
+      evidence: { recordedOutcome: l.outcome, citedEvidence: excerpts, citedTotal: cited.length },
+      relatedChecks: checks.slice(0, 5).map(c => ({ ref: c.evidenceRef, check: c.check, status: c.result.status, code: c.result.code,
+        configuration: c.configuration, parserStatus: c.result.parserStatus ?? null, findings: c.result.findings?.length ?? 0 })),
+      relatedChecksTotal: checks.length,
+      recurrence: related.slice(0, 3), recurrenceTotal: related.length,
+      conflictingLessons: conflicts.slice(0, 5).map(o => ({ id: o.id, statement: clip(o.statement, 300), status: o.status, outcome: o.outcome })),
+      conflictingLessonsTotal: conflicts.length,
+      recentHistory: history,
+      note: 'Overlapping guidance may conflict; no semantic conflict detection is claimed. Check links and recurrence are descriptive, never proof. Human review decides.' };
+  });
+  return { total: due.length, truncated: due.length > items.length, items };
 }

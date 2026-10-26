@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { initialize, readConfig, repository, scopesOverlap, taskPath } from './config.js';
+import { initialize, readConfig, repository, taskPath } from './config.js';
 import { Store } from './store.js';
 import { start } from './factory.js';
 import { guide } from './guides.js';
 import { verify, verificationStatus } from './sensors.js';
-import { learn, validateCandidates } from './learning.js';
-import { REVIEW_AGE_MS } from './types.js';
+import { learn, reviewItems, validateCandidates } from './learning.js';
+import { recurrenceSummaries } from './findings.js';
 import { metrics } from './metrics.js';
 
 const help = `lean-harness — local lessons, explicit checks
@@ -18,7 +18,9 @@ const help = `lean-harness — local lessons, explicit checks
   status                            Current verification and session summaries
   learn [--session ID]               One bounded extraction attempt per ended session
   capture --file FILE               Import one explicit candidate with evidence
-  review                            Candidates, overdue lessons, evidence, overlapping guidance
+  review                            Candidates/overdue lessons with claim, evidence, checks, recurrence, conflicts (bounded)
+  recurrence                        Offline repeated-failure groups across distinct sessions (no model call)
+  link-check ID CHECK_REF            Link a lesson to a real check run (explanatory only; not proof)
   approve ID... [--supersedes ID]    Human-operated batch approval
   reject ID...                      Reject candidates, preserving history
   retire ID...                      Roll back active lessons
@@ -98,18 +100,22 @@ export async function main(argv: string[]): Promise<number> {
           else if (!store.db.prepare('SELECT id FROM sessions WHERE id=?').get(sessionId)) {
             store.createSession('', [], sessionId); store.endSession(sessionId, 'manual'); store.db.prepare("UPDATE sessions SET learning_status='done' WHERE id=?").run(sessionId);
           }
-          store.addEvidence(evidence); return store.addCandidate(sessionId, candidate);
+          store.addEvidence(evidence); const lessonId = store.addCandidate(sessionId, candidate);
+          if (data.checkRefs !== undefined && (!Array.isArray(data.checkRefs) || data.checkRefs.length > 8)) throw new Error('checkRefs must be an array of at most 8 references.');
+          for (const ref of data.checkRefs ?? []) store.linkCheck(lessonId, String(ref), config);
+          return lessonId;
         }); print({ id, status: store.lessons().find(l => l.id === id)!.status }); break;
       }
       case 'review': {
         if (args.length) throw new Error('review takes no arguments.');
-        const lessons = store.lessons();
-        print(lessons.filter(l => l.status === 'candidate' || (l.status === 'active' && (!l.reviewedAt || Date.now() - Date.parse(l.reviewedAt) >= REVIEW_AGE_MS))).map(l => ({
-          ...l, evidenceDetails: store.evidence(l.sessionId).filter(e => l.evidence.includes(e.id)),
-          overlappingGuidance: lessons.filter(other => other.id !== l.id && other.status !== 'retired' && scopesOverlap(l.scope, other.scope))
-            .map(other => ({ id: other.id, statement: other.statement, status: other.status })),
-          note: 'Overlapping guidance may conflict. Human review decides; no semantic conflict detection is claimed.'
-        }))); break;
+        print(reviewItems(store, config)); break;
+      }
+      case 'recurrence':
+        if (args.length) throw new Error('recurrence takes no arguments.');
+        print(recurrenceSummaries(store)); break;
+      case 'link-check': {
+        const o = options(args, []); if (o.rest.length !== 2) throw new Error('link-check requires a lesson ID and a check evidence reference.');
+        print(store.linkCheck(o.rest[0]!, o.rest[1]!, config)); break;
       }
       case 'approve': case 'reject': case 'retire': case 'reaffirm': {
         const o = options(args, command === 'approve' ? ['--supersedes'] : []);
