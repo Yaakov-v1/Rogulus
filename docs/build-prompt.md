@@ -30,7 +30,7 @@ Orchestration used to BUILD this package is separate from the package's runtime.
 
 Workspace: `/Users/yaakovins/Documents/Harnestica `
 
-Package: `/Users/yaakovins/Documents/Harnestica /harness`
+Package: `/Users/yaakovins/Documents/Harnestica /archive/lean-sdlc-harness`
 
 Read first:
 

@@ -1,6 +1,6 @@
 .DS_Store
 node_modules
-harness/dist/
+archive/lean-sdlc-harness/dist/
 *.tgz
 !releases/*.tgz
 .lean-harness/state.sqlite*

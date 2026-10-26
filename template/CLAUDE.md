@@ -1,0 +1,74 @@
+# Harnestica: efficient, auto-scaling development harness
+
+An **efficient harness** is the smallest set of instructions and checks that keeps every session both fast and correct.
+It **auto-scales** two ways: ritual grows with task size, and guidance grows from evidence, inside the fixed budget of this file (≤100 lines).
+Native settings, permissions and memory stay as they are; this file adds process only.
+
+## Project checks
+The checks are the only source of _green_. Fill in the real commands once:
+- Types: `<command>`
+- Tests: `<command>`
+- Lint/build: `<command>` (optional)
+
+## 1. Size the task
+Classify every request before acting. When unsure between two sizes, pick the larger one.
+
+| Size | Signal | Ritual |
+|---|---|---|
+| Tiny | one file, obvious change, no behaviour change | edit → run the narrowest relevant check |
+| Small | one area, clear intent, ≤3 files | read the touched code → edit → run checks |
+| Medium | several files, a new behaviour, or unclear intent | state the plan in ≤5 bullets → get a yes → build → checks → self-review the diff |
+| Large | cross-cutting, schema/API/security, or ≥1 day | written plan with risks → approval → slice into tracer bullets → checks per slice → independent review |
+
+Escalate a size the moment the work reveals more (a failing unrelated test, a hidden caller, a migration).
+When you de-escalate, say why in one line.
+
+## 2. Core loop
+1. **Understand**: restate the goal in one line. Locate code with targeted search; read the symbols you will change and their callers.
+2. **Plan** (medium and up): files, approach, the check that will prove it. Ask only questions whose answer changes the work.
+3. **Build**: the smallest change that meets the goal, in the style of the surrounding code. Keep the build _green_ between slices.
+4. **Verify**: run the project checks. A bug fix starts _red_: reproduce it with a failing test first, then make it pass.
+5. **Report**: what changed, the check output that proves it, and what is not done or not verified.
+
+A step is done when its completion line holds:
+- Understand: you can name every file you will touch.
+- Plan: every file in it has a reason and the proving check is named.
+- Build: the diff contains only goal-serving changes.
+- Verify: each project check ran in this session and its result is quoted.
+
+## 3. Evidence rules
+- Claim _green_ only from a check you ran after the last edit. Quote the command and the result line.
+- A failure, timeout, interruption, skipped check or unparseable output is _not verified_, never a pass.
+- When a check cannot run (missing tool, credentials, network), report it as unverified with the reason.
+- Fix the cause of a red check. Keep every existing test and assertion; strengthen them when behaviour changes.
+- Separate "implemented" from "useful": tests prove behaviour, only real use proves value.
+
+## 4. Context budget
+- Read the parts that bear on the task: search first, then open the relevant ranges.
+- Delegate wide sweeps (many files, docs, logs) to a subagent that returns a compact summary; keep the main context for decisions and edits.
+- Prefer the environment (`package.json`, configs, `--help`) over memory for facts it already states.
+- Summarise long command output to the lines that matter.
+
+## 5. Learning loop
+A **lesson** is a one-line, evidence-backed correction that prevents a repeat mistake in this repo.
+
+Propose a lesson when any of these happen:
+- the owner corrects your approach, assumption or output;
+- the same check fails the same way twice across sessions;
+- a wrong assumption costs a rework.
+
+Proposing:
+1. Write the candidate at the end of your report as: `LESSON? <rule> — evidence: <what happened, date> — scope: <path or repo>`.
+2. Add it to the Lessons slot only after the owner says yes. A candidate stays a candidate until then.
+3. One lesson per distinct mistake; merge with an existing lesson when they overlap.
+
+Keeping the slot tight:
+- Hard cap: 12 lessons. When full, propose which lesson to merge or retire before adding a new one.
+- Re-review any lesson older than 90 days: keep, rewrite, or retire, with the owner's yes.
+- Retire a lesson the codebase now enforces itself (a lint rule, a type, a test).
+- Lessons are scoped: apply a lesson only when the task touches its scope.
+
+## 6. Lessons
+Format: `- [YYYY-MM-DD · scope] rule — evidence`
+
+<!-- Approved lessons go here, newest first, at most 12. -->
