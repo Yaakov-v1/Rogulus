@@ -22,10 +22,11 @@ The slot holds at most **12** lessons, newest first. `.claude/harnestica/state/`
 Pick the action from the request, then follow its steps. Every change to the slot needs the owner's explicit yes in this conversation; a candidate stays a candidate until then.
 
 ### propose
-1. Draft one candidate in the format above from the correction, repeated failure or rework at hand.
-2. Compare it against every existing lesson. When one overlaps, draft a **merge** instead.
-3. When the slot already holds 12, also name the lesson to retire or merge to make room.
-4. Show the candidate (and any retire/merge) and ask for a yes.
+1. Apply the durable bar: propose a lesson only when the code, tests, types, comments or docs cannot already carry it. When a check, lint rule, type or test could enforce it, propose that change instead; enforced rules beat remembered ones.
+2. Draft one candidate in the format above from the correction, repeated failure or rework at hand.
+3. Compare it against every existing lesson. When one overlaps, draft a **merge** instead.
+4. When the slot already holds 12, also name the lesson to retire or merge to make room.
+5. Show the candidate (and any retire/merge) and ask for a yes.
 
 Done when the owner has a concrete one-line candidate to accept or reject.
 

@@ -77,6 +77,7 @@ test('fresh repo: registers the four hooks and allows the check commands', t => 
   const settings = readJson(join(dir, '.claude/settings.json'));
   assert.deepEqual(Object.keys(settings.hooks).sort(), ['PostToolUse', 'PostToolUseFailure', 'SessionStart', 'Stop']);
   assert.ok(settings.permissions.allow.includes('Bash(npm test:*)'));
+  assert.ok(settings.permissions.allow.includes('Bash(node .claude/hooks/harnestica-check.mjs:*)'));
 });
 
 test('fresh repo: ignores the hook state directory', t => {

@@ -101,8 +101,47 @@ test('a red gate is shown only once per edit', t => {
   assert.equal(run('stop', {}), null);
 });
 
+test('a run of the check runner clears the gate for every check', t => {
+  const { run } = project(t);
+  run('track', edit());
+  run('track', bash('node .claude/hooks/harnestica-check.mjs'));
+  assert.equal(run('stop', {}), null);
+});
+
+test('the check runner counts when called by its quoted absolute path, which has spaces', t => {
+  const { dir, run } = project(t);
+  run('track', edit());
+  run('track', bash(`node "${join(dir, '.claude', 'hooks', 'harnestica-check.mjs')}"`));
+  assert.equal(run('stop', {}), null);
+});
+
+for (const command of ['node "$CLAUDE_PROJECT_DIR/.claude/hooks/harnestica-check.mjs"', 'node ./.claude/hooks/harnestica-check.mjs 2>&1',
+  'npm run typecheck 2>&1 && npm test 2>&1']) {
+  test(`${command} clears the gate`, t => {
+    const { run } = project(t);
+    run('track', edit());
+    run('track', bash(command));
+    assert.equal(run('stop', {}), null);
+  });
+}
+
+test('the gate names the check runner', t => {
+  const { run } = project(t);
+  run('track', edit());
+  assert.match(run('stop', {}).reason, /node \.claude\/hooks\/harnestica-check\.mjs/);
+});
+
+test('a runner failure repeated in a later session is flagged as "all checks"', t => {
+  const { run } = project(t);
+  const runnerFailure = session => failedBash('node .claude/hooks/harnestica-check.mjs', 'Exit code 1\n✗ tests (exit 1, 0.4s): npm test\n    AssertionError: 2 !== 3', { session_id: session });
+  run('failure', runnerFailure('s1'));
+  assert.match(run('failure', runnerFailure('s2')).hookSpecificOutput.additionalContext, /check "all checks" failed the same way/);
+});
+
 const MASKED_OR_FAKE_CHECK_RUNS = ['echo "npm test"', 'git commit -m "npm test"', 'npm run typecheck:fix', 'npm test | tail -5', 'npm test || true',
-  'npm test; echo done', 'npm test &', 'npm test & wait', 'false || npm test', 'echo "a; npm test --x"', "echo 'npm test && npm run typecheck'"];
+  'npm test; echo done', 'npm test &', 'npm test & wait', 'false || npm test', 'echo "a; npm test --x"', "echo 'npm test && npm run typecheck'",
+  'node .claude/hooks/harnestica-check.mjs | tail -3', 'node .claude/hooks/harnestica-check.mjs || true', 'node other/harnestica-check.mjs.bak',
+  'node scripts/my-harnestica-check.mjs', 'node /tmp/other/.claude/hooks/harnestica-check.mjs', 'node packages/app/.claude/hooks/harnestica-check.mjs'];
 for (const command of MASKED_OR_FAKE_CHECK_RUNS) {
   test(`${command} does not count as a passing check run`, t => {
     const { run } = project(t);
@@ -267,6 +306,121 @@ test('the harness block is audited, not the project heading', t => {
   const installed = `# P\n\n## Lessons learned\n- old project note\n\n<!-- harnestica:start -->\n${claudeMdWithLessons(2)}- [2026-13-45 · repo] bad date — x\n- loose note\n<!-- harnestica:end -->\n`;
   const { run } = project(t, { claudeMd: installed });
   assert.match(startContext(run, { now: '2026-10-26' }), /2 lesson line\(s\) do not match/);
+});
+
+const TEST_FILE = 'tests/math.test.js';
+const COMMITTED_TEST = "test('adds', () => {\n  assert.equal(add(1, 2), 3);\n  assert.equal(add(0, 0), 0);\n});\n";
+const git = (dir, ...args) => spawnSync('git', ['-c', 'user.email=t@example.com', '-c', 'user.name=t', '-c', 'commit.gpgsign=false', ...args], { cwd: dir, encoding: 'utf8' });
+
+const SKIPPED_TEST = COMMITTED_TEST.replace("test('adds'", "test.skip('adds'");
+
+// A project in a git repo with one committed test file and a fixture, and a session already started (so the tamper
+// baseline is taken). After each change the checks pass, so only the tamper sensor can block.
+function committedProject(testContext, { beforeSessionStart } = {}) {
+  const harness = project(testContext);
+  mkdirSync(join(harness.dir, 'tests', 'fixtures'), { recursive: true });
+  writeFileSync(join(harness.dir, TEST_FILE), COMMITTED_TEST);
+  writeFileSync(join(harness.dir, 'tests', 'fixtures', 'data.json'), '{}');
+  git(harness.dir, 'init', '-q');
+  git(harness.dir, 'add', '-A');
+  git(harness.dir, 'commit', '-qm', 'init');
+  beforeSessionStart?.(harness.dir);
+  harness.run('start', { now: '2026-10-26' });
+  const afterChange = () => {
+    harness.run('track', edit(TEST_FILE));
+    harness.run('track', bash('npm run typecheck && npm test'));
+  };
+  const changeTest = text => {
+    writeFileSync(join(harness.dir, TEST_FILE), text);
+    afterChange();
+  };
+  return { ...harness, changeTest, afterChange };
+}
+
+test('stop flags a deleted test file', t => {
+  const { dir, run, afterChange } = committedProject(t);
+  rmSync(join(dir, TEST_FILE));
+  afterChange();
+  assert.match(run('stop', {}).reason, /assertions removed from tests\/math\.test\.js/);
+});
+
+test('a deleted fixture under tests/ is not flagged', t => {
+  const { dir, run, afterChange } = committedProject(t);
+  rmSync(join(dir, 'tests', 'fixtures', 'data.json'));
+  afterChange();
+  assert.equal(run('stop', {}), null);
+});
+
+test('a renamed test file is not flagged', t => {
+  const { dir, run, afterChange } = committedProject(t);
+  git(dir, 'mv', TEST_FILE, 'tests/sum.test.js');
+  afterChange();
+  assert.equal(run('stop', {}), null);
+});
+
+test('tests moved into a new, untracked file are not flagged', t => {
+  const { dir, run, changeTest } = committedProject(t);
+  writeFileSync(join(dir, 'tests', 'zero.test.js'), "test('zero', () => {\n  assert.equal(add(0, 0), 0);\n});\n");
+  changeTest(COMMITTED_TEST.replace('  assert.equal(add(0, 0), 0);\n', ''));
+  assert.equal(run('stop', {}), null);
+});
+
+test('test changes already present at session start are not blamed on the session', t => {
+  const { run, changeTest } = committedProject(t, { beforeSessionStart: dir => writeFileSync(join(dir, TEST_FILE), SKIPPED_TEST) });
+  changeTest(SKIPPED_TEST + '// unrelated edit\n');
+  assert.equal(run('stop', {}), null);
+});
+
+test('one block carries both the check gate and the tamper finding', t => {
+  const { dir, run } = committedProject(t);
+  writeFileSync(join(dir, TEST_FILE), SKIPPED_TEST);
+  run('track', edit(TEST_FILE));
+  const reason = run('stop', {}).reason;
+  assert.match(reason, /have not passed since/);
+  assert.match(reason, /skip\/only marker added/);
+});
+
+test('stop flags a newly skipped test', t => {
+  const { run, changeTest } = committedProject(t);
+  changeTest(COMMITTED_TEST.replace("test('adds'", "test.skip('adds'"));
+  assert.match(run('stop', {}).reason, /skip\/only marker added in tests\/math\.test\.js/);
+});
+
+test('stop flags a test that lost assertions', t => {
+  const { run, changeTest } = committedProject(t);
+  changeTest(COMMITTED_TEST.replace('  assert.equal(add(0, 0), 0);\n', ''));
+  assert.match(run('stop', {}).reason, /assertions removed from tests\/math\.test\.js/);
+});
+
+test('a strengthened test is not flagged', t => {
+  const { run, changeTest } = committedProject(t);
+  changeTest(COMMITTED_TEST.replace('});', '  assert.equal(add(-1, 1), 0);\n});'));
+  assert.equal(run('stop', {}), null);
+});
+
+test('the same tampering is flagged only once per session', t => {
+  const { run, changeTest } = committedProject(t);
+  changeTest(SKIPPED_TEST);
+  assert.equal(run('stop', {}).decision, 'block');
+  changeTest(SKIPPED_TEST + '// touched again\n');
+  assert.equal(run('stop', {}), null);
+});
+
+test('after one of two findings is reported, the other is still reported once', t => {
+  const { run, changeTest } = committedProject(t);
+  changeTest(SKIPPED_TEST);
+  run('stop', {});
+  changeTest(SKIPPED_TEST.replace('  assert.equal(add(0, 0), 0);\n', ''));
+  const reason = run('stop', {}).reason;
+  assert.match(reason, /assertions removed/);
+  assert.doesNotMatch(reason, /skip\/only/);
+});
+
+test('a project without git is never flagged for tampering', t => {
+  const { run } = project(t);
+  run('track', edit(TEST_FILE));
+  run('track', bash('npm run typecheck && npm test'));
+  assert.equal(run('stop', {}), null);
 });
 
 test('hooks fail open on garbage input and an unreadable config', t => {

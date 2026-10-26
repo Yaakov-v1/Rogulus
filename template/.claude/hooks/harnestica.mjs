@@ -3,7 +3,7 @@
 //   start   SessionStart        audit the Lessons slot (cap, 90-day review, format) and the checks config
 //   track   PostToolUse         record code edits and passing check runs
 //   failure PostToolUseFailure  record failed check runs; flag a failure repeated from an earlier session
-//   stop    Stop                block once when code changed after the last passing check
+//   stop    Stop                block once when code changed after the last passing check, or tests were weakened
 // Session state is an append-only event log, so parallel tool calls never lose updates.
 // Every error fails open: the session is never broken by the harness.
 import { realpathSync } from 'node:fs';

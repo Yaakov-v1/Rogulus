@@ -1,3 +1,7 @@
+---
+paths:
+  - "**/*.{js,jsx,ts,tsx,mjs,cjs,py,go,rs,java,kt,kts,rb,php,cs,swift,scala,c,cc,cpp,h,hpp,vue,svelte,sh}"
+---
 # Clean Code rulebook
 
 Code is read far more often than it is written: write for the next reader. Tests are code too.

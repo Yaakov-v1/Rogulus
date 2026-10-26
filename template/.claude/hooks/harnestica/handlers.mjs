@@ -5,6 +5,8 @@ import { hasNoChecks, loadConfig } from './config.mjs';
 import { failureSignature, recordFailure } from './failures.mjs';
 import { auditLessons } from './lessons.mjs';
 import { replyBlock, replyWithContext } from './protocol.mjs';
+import { findTestTampering } from './tamper.mjs';
+import { RUNNER_CHECK, RUNNER_COMMAND } from './runner.mjs';
 import { openSession } from './session.mjs';
 import { matchCheck, matchChecks, mutates } from './shell.mjs';
 import { projectRoot } from './state.mjs';
@@ -28,9 +30,17 @@ function eventClock(input) {
   return input.now ? new Date(input.now) : new Date();
 }
 
+// Test changes already in the working tree when the session starts are the owner's, not the agent's.
+function recordTamperBaseline(root, config, input) {
+  if (hasNoChecks(config)) return;
+  const session = openSession(root, input.session_id);
+  if (!session.hasTamperBaseline) session.record({ type: 'baseline', findings: findTestTampering(root) });
+}
+
 export function onSessionStart(input) {
   const root = projectRoot(input);
   const config = loadConfig(root);
+  recordTamperBaseline(root, config, input);
   const notes = hasNoChecks(config) ? [config.unreadable ? UNREADABLE_CONFIG_NOTE : NO_CHECKS_NOTE] : [];
   notes.push(...auditLessons(readClaudeMd(root), config, eventClock(input)));
   if (notes.length) replyWithContext('SessionStart', notes.join('\n'));
@@ -45,11 +55,17 @@ function bashChangedFiles(input) {
   return Boolean(input.tool_response?.bashEditDiff) || mutates(input.tool_input?.command);
 }
 
+// A run of the check runner covers every configured check.
+function checksCoveredBy(config, hit) {
+  return hit.check === RUNNER_CHECK ? config.checks : [hit.check];
+}
+
 function trackBash(root, config, input) {
   const session = openSession(root, input.session_id);
   if (bashChangedFiles(input)) session.record({ type: 'edit' });
-  for (const hit of matchChecks(config, input.tool_input?.command)) {
-    session.record({ type: hit.trusted ? 'pass' : 'masked', check: hit.check.name });
+  for (const hit of matchChecks(config, input.tool_input?.command, root)) {
+    const type = hit.trusted ? 'pass' : 'masked';
+    for (const check of checksCoveredBy(config, hit)) session.record({ type, check: check.name });
   }
 }
 
@@ -70,7 +86,7 @@ function repeatFailureNote(checkName, earlier) {
 export function onToolFailure(input) {
   if (input.tool_name !== 'Bash' || input.is_interrupt) return;
   const root = projectRoot(input);
-  const hit = matchCheck(loadConfig(root), input.tool_input?.command);
+  const hit = matchCheck(loadConfig(root), input.tool_input?.command, root);
   if (!hit) return;
   const session = openSession(root, input.session_id);
   const signature = failureSignature(hit.check, input.error);
@@ -89,10 +105,31 @@ function isGateDue(session) {
 
 function gateReason(session) {
   const commands = session.unpassed.map(check => '`' + check.command + '`').join(', ');
+  const runAll = `all at once with \`${RUNNER_COMMAND}\``;
   if (session.lastFail > session.lastEdit) {
-    return `Harnestica: the last check after your edits failed. Fix the cause and re-run ${commands}, or report the task as red / not verified and quote the failure.`;
+    return `Harnestica: the last check after your edits failed. Fix the cause and re-run ${commands} (or ${runAll}), or report the task as red / not verified and quote the failure.`;
   }
-  return `Harnestica: code changed and these checks have not passed since: ${commands}. Run them and quote the results. If a check cannot run, report the task as not verified and say why.`;
+  return `Harnestica: code changed and these checks have not passed since: ${commands}. Run them (or ${runAll}) and quote the result lines. If a check cannot run, report the task as not verified and say why.`;
+}
+
+function isScanDue(session) {
+  return Boolean(session.lastEdit) && !session.scanned.has(session.lastEdit);
+}
+
+// Tampering found now that was neither there at session start nor reported already.
+function newTampering(root, session) {
+  return findTestTampering(root).filter(finding => !session.knownTampering.has(finding));
+}
+
+function tamperReason(findings) {
+  return `Harnestica: compared with HEAD, tests were skipped or lost assertions: ${findings.join('; ')}. Restore them, or, if the change is intended, say why in your report (rule T3).`;
+}
+
+// Everything is recorded only after the slow work, so a hook killed by its timeout leaves the gates due for next time.
+function recordStop(session, { gateDue, scanDue, tampering }) {
+  if (gateDue) session.record({ type: 'gate', edit: session.lastEdit });
+  if (scanDue) session.record({ type: 'scan', edit: session.lastEdit });
+  for (const finding of tampering) session.record({ type: 'tamper', finding });
 }
 
 export function onStop(input) {
@@ -101,7 +138,10 @@ export function onStop(input) {
   const config = loadConfig(root);
   if (!config.checks.length) return;
   const session = openSession(root, input.session_id, config);
-  if (!isGateDue(session)) return;
-  session.record({ type: 'gate', edit: session.lastEdit });
-  replyBlock(gateReason(session));
+  const gateDue = isGateDue(session);
+  const scanDue = isScanDue(session);
+  const tampering = scanDue ? newTampering(root, session) : [];
+  const reasons = [gateDue && gateReason(session), tampering.length && tamperReason(tampering)].filter(Boolean);
+  recordStop(session, { gateDue, scanDue, tampering });
+  if (reasons.length) replyBlock(reasons.join('\n'));
 }

@@ -12,7 +12,7 @@ const SIGNATURE_LENGTH = 16;
 const EXCERPT_LENGTH = 300;
 
 const EXIT_CODE_LINE = /^exit code \d+$/i;
-const ERROR_LINE = /error|fail|assert|expected|cannot|not found|TS\d+/i;
+export const ERROR_LINE = /error|fail|assert|expected|cannot|not found|TS\d+/i;
 const DURATION = /\b\d+(\.\d+)?\s?(ms|s|m)\b/g;
 const HEX_NUMBER = /\b0x[0-9a-f]+\b/gi;
 const NUMBER = /\b\d+\b/g;

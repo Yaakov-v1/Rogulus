@@ -5,8 +5,9 @@ It **auto-scales** two ways: ritual grows with task size, and guidance grows fro
 Native settings, permissions and memory stay as they are; this file adds process only.
 
 ## Project checks
-The checks are the only source of _green_. Their commands live in `.claude/harnestica.json` (`checks`); run them from there.
-Hooks in `.claude/hooks/` enforce this: the Stop hook sends you back once when code changed and not every check has passed since.
+The checks are the only source of _green_. Their commands live in `.claude/harnestica.json` (`checks`).
+Run them all with `node .claude/hooks/harnestica-check.mjs`: one line per check, plus only the failing output. Don't pipe or filter it.
+The Stop hook sends you back once when code changed and not every check has passed since, or when tests were deleted, skipped or lost assertions.
 
 ## 1. Size the task
 Classify every request before acting. When unsure between two sizes, pick the larger one.
@@ -24,7 +25,7 @@ When you de-escalate, say why in one line.
 ## 2. Core loop
 1. **Understand**: restate the goal in one line. Locate code with targeted search; read the symbols you will change and their callers.
 2. **Plan** (medium and up): files, approach, the check that will prove it. Ask only questions whose answer changes the work.
-3. **Build**: the smallest change that meets the goal. Before writing or reviewing code, read `.claude/rules/CLEAN-CODE.md`; every changed line meets its MUST rules. Keep the build _green_ between slices.
+3. **Build**: the smallest change that meets the goal. The Clean Code rulebook (`.claude/rules/CLEAN-CODE.md`) loads when you touch code; every changed line meets its MUST rules. Keep the build _green_ between slices.
 4. **Verify**: run the project checks. A bug fix starts _red_: reproduce it with a failing test first, then make it pass.
 5. **Report**: what changed, the check output that proves it, and what is not done or not verified.
 
@@ -39,6 +40,7 @@ A step is done when its completion line holds:
 - A failure, timeout, interruption, skipped check or unparseable output is _not verified_, never a pass.
 - When a check cannot run (missing tool, credentials, network), report it as unverified with the reason.
 - Fix the cause of a red check. Keep every existing test and assertion; strengthen them when behaviour changes.
+- If a test looks wrong or conflicts with the goal, stop and report it; never edit a test just to make it pass.
 - Separate "implemented" from "useful": tests prove behaviour, only real use proves value.
 
 ## 4. Context budget
