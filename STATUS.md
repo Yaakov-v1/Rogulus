@@ -1,4 +1,19 @@
-# Status — 2026-10-26
+# Status — 2026-10-27 (AIDLC fork of Harnestica)
+
+This folder is the AIDLC: Harnestica plus a thin delta, prepared on a Mac with no Unreal or Xcode. It is meant to be installed on the game-dev machine. Branch `aidlc`, uncommitted.
+
+**Added (tests 106/106, fixture-level only):**
+- `template/CLAUDE.md` (77 lines, 6,165 bytes): trust ranking and `verified`/`claimed` tags (recalled context ≈77% true), model routing, a plan-based tripwire, a 3-line plain-words checkpoint, codegraph/ponytail mentions, and a skill-proposal rule.
+- `/lesson` gained `propose-skill`, which needs three recurrences cited from git history, `failures.jsonl` or lesson evidence.
+- `profiles/unreal/` with `./install.sh <target> --profile unreal`: rules (path-scoped), `checks.unverified.json`, `VERIFY.md`, `bootstrap-check.sh`. Re-running the installer never overwrites `VERIFY.md`.
+
+**Not verified:** every Unreal command and name (no engine here); all hooks and the new rules in a live Claude Code session. The tripwire and checkpoint are instructions only; no hook enforces them yet. Promotion of an unverified check to an active one is manual, and the runner does not detect leftover `<placeholders>`.
+
+**Next on the game machine:** run `bash .claude/profiles/unreal/bootstrap-check.sh`, then work through `VERIFY.md`. After a week of use, decide whether the tripwire needs a hook and whether the skill rule fires at the right times.
+
+---
+
+# Status — 2026-10-26 (Harnestica baseline)
 
 **Full harness built and fixture-tested (98/98). Compared with ~16 popular harnesses; the top gaps are fixed. Not yet exercised in a live Claude Code session or a real project.**
 

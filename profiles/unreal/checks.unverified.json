@@ -1,0 +1,24 @@
+{
+  "_readme": "TEMPLATE, never auto-loaded: install.sh copies it for reference only and it is not merged into .claude/harnestica.json. Nothing here has been run. See VERIFY.md before moving an entry into harnestica.json.",
+  "version": 1,
+  "checks": [
+    {
+      "name": "unreal-build-editor",
+      "command": "<UE_ROOT>/Engine/Build/BatchFiles/Mac/Build.sh <Project>Editor Mac Development -Project=\"<ProjectDir>/<Project>.uproject\"",
+      "status": "unverified",
+      "note": "Editor-target build via Build.sh; the Mac/Linux subfolder and argument order are from general UE knowledge. Use the Linux folder on Linux, Build.bat on Windows."
+    },
+    {
+      "name": "unreal-buildcookrun",
+      "command": "<UE_ROOT>/Engine/Build/BatchFiles/RunUAT.sh BuildCookRun -project=\"<ProjectDir>/<Project>.uproject\" -build -cook -stage -pak -platform=Mac -clientconfig=Development -nop4",
+      "status": "unverified",
+      "note": "Full build/cook/stage; slow, so a candidate for pre-release rather than every edit. Flags and platform name unconfirmed on this UE version."
+    },
+    {
+      "name": "unreal-automation-tests",
+      "command": "<UE_ROOT>/Engine/Binaries/Mac/UnrealEditor-Cmd \"<ProjectDir>/<Project>.uproject\" -ExecCmds=\"Automation RunTests <Filter>; Quit\" -unattended -nullrhi -nosplash",
+      "status": "unverified",
+      "note": "Headless automation tests. Binary location differs per platform (macOS may need the .app bundle path). Confirm the exit code reflects test failure before trusting it as a gate."
+    }
+  ]
+}

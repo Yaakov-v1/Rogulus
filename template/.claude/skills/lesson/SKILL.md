@@ -1,6 +1,6 @@
 ---
 name: lesson
-description: Manage Harnestica lessons in CLAUDE.md — propose, approve, merge, retire or re-review one. Use on "/lesson", after a LESSON? candidate, when the owner says "remember this" about this repo, or when the session-start audit reports an overdue or over-cap Lessons slot.
+description: Manage Harnestica lessons in CLAUDE.md — propose, approve, merge, retire or re-review one, or propose a skill for a sequence that keeps recurring. Use on "/lesson", after a LESSON? candidate, when the owner says "remember this" about this repo, or when the session-start audit reports an overdue or over-cap Lessons slot.
 ---
 
 # lesson
@@ -29,6 +29,12 @@ Pick the action from the request, then follow its steps. Every change to the slo
 5. Show the candidate (and any retire/merge) and ask for a yes.
 
 Done when the owner has a concrete one-line candidate to accept or reject.
+
+### propose-skill
+Use when the same multi-step sequence has recurred about three times and a lesson line cannot carry it. Cite each occasion from git history, `failures.jsonl` or existing lesson evidence; memory of a recurrence does not count.
+1. Check that no existing skill, command or script already does it; prefer extending one.
+2. Draft the skill's name, one-line trigger description and numbered steps, each step something a check can confirm. Keep it under 40 lines.
+3. Show the draft with the three occasions as evidence and ask for a yes. Create `.claude/skills/<name>/SKILL.md` only after it. Skills share the lesson cap's spirit: retire one when it stops being used.
 
 ### approve
 1. Insert the approved line at the top of the slot, below the format line, with today's date.

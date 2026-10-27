@@ -27,6 +27,7 @@ const install = target => {
   assert.equal(result.status, 0, result.stderr + result.stdout);
   return result.stdout;
 };
+const runProfileInstall = (target, profile) => spawnSync('bash', [INSTALL, target, '--profile', profile], { encoding: 'utf8' });
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 const readText = (dir, file) => readFileSync(join(dir, file), 'utf8');
 
@@ -156,4 +157,65 @@ test('settings of an unexpected shape abort before any write', t => {
 
 test('refuses a missing target', () => {
   assert.equal(runInstall('/nonexistent/harnestica-target').status, EXIT_USAGE);
+});
+
+const PROFILE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'profiles', 'unreal');
+const PROFILE_REFERENCE_FILES = ['VERIFY.md', 'bootstrap-check.sh', 'checks.unverified.json'];
+
+function installUnrealProfile(testContext) {
+  const dir = installIntoPackage(testContext);
+  const result = runProfileInstall(dir, 'unreal');
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+  return dir;
+}
+
+test('profile unreal: installs the rules file with paths frontmatter', t => {
+  const dir = installUnrealProfile(t);
+  const rules = readText(dir, '.claude/rules/UNREAL.md');
+  assert.equal(rules, readText(PROFILE_DIR, 'UNREAL.md'));
+  assert.match(rules, /^---\npaths:\n  - "/);
+});
+
+test('profile unreal: copies the other files as inactive reference', t => {
+  const dir = installUnrealProfile(t);
+  for (const file of PROFILE_REFERENCE_FILES) assert.equal(readText(dir, join('.claude/profiles/unreal', file)), readText(PROFILE_DIR, file), file);
+});
+
+test('profile unreal: a second run changes nothing', t => {
+  const dir = installUnrealProfile(t);
+  const files = [...TRACKED_FILES, '.claude/rules/UNREAL.md', ...PROFILE_REFERENCE_FILES.map(file => join('.claude/profiles/unreal', file))];
+  const snapshot = files.map(file => readText(dir, file));
+  assert.equal(runProfileInstall(dir, 'unreal').status, 0);
+  assert.deepEqual(files.map(file => readText(dir, file)), snapshot);
+});
+
+test('profile unreal: a re-run keeps the owner\'s evidence log in VERIFY.md', t => {
+  const dir = installUnrealProfile(t);
+  const verifyPath = join(dir, '.claude/profiles/unreal/VERIFY.md');
+  const withEvidence = `${readText(dir, '.claude/profiles/unreal/VERIFY.md')}\nverified 2026-11-01: Build.sh exit 0\n`;
+  writeFileSync(verifyPath, withEvidence);
+  assert.equal(runProfileInstall(dir, 'unreal').status, 0);
+  assert.equal(readText(dir, '.claude/profiles/unreal/VERIFY.md'), withEvidence);
+});
+
+test('profile unreal: never merges candidate checks into the active config', t => {
+  const dir = installUnrealProfile(t);
+  const config = readText(dir, '.claude/harnestica.json');
+  assert.deepEqual(readJson(join(dir, '.claude/harnestica.json')).checks.map(check => check.command), ['npm run typecheck', 'npm test']);
+  assert.ok(!config.includes('unverified') && !config.includes('UnrealEditor'));
+  assert.ok(!readText(dir, '.claude/settings.json').includes('Unreal'));
+});
+
+test('an unknown profile fails with a clear message and writes nothing', t => {
+  const dir = targetRepo(t);
+  const result = runProfileInstall(dir, 'nope');
+  assert.equal(result.status, EXIT_USAGE);
+  assert.match(result.stderr, /unknown profile "nope".*Available: unreal/);
+  assert.deepEqual(readdirSync(dir), []);
+});
+
+test('without --profile no profile files are installed', t => {
+  const dir = installIntoPackage(t);
+  assert.deepEqual(readdirSync(join(dir, '.claude/rules')), ['CLEAN-CODE.md']);
+  assert.ok(!readdirSync(join(dir, '.claude')).includes('profiles'));
 });
