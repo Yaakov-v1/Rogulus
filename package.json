@@ -1,8 +1,8 @@
 {
-  "name": "harnestica",
+  "name": "aidlc",
   "version": "1.0.0",
   "private": true,
-  "description": "An efficient, auto-scaling development harness for Claude Code",
+  "description": "AIDLC: a lean, self-improving Claude Code harness (Harnestica engine) with an Unreal Engine profile",
   "type": "module",
   "engines": { "node": ">=18" },
   "scripts": {
